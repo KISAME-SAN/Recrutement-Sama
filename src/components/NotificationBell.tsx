@@ -9,10 +9,13 @@ import {
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const NotificationBell = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [applications, setApplications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Charger les candidatures initiales
   useEffect(() => {
@@ -25,6 +28,7 @@ const NotificationBell = () => {
             title
           )
         `)
+        .eq("is_read", false)
         .order("created_at", { ascending: false })
         .limit(5);
 
@@ -35,6 +39,7 @@ const NotificationBell = () => {
 
       if (data) {
         setApplications(data);
+        setUnreadCount(data.length);
       }
     };
 
@@ -70,6 +75,7 @@ const NotificationBell = () => {
               const updatedApplications = [applicationWithJob, ...currentApplications].slice(0, 5);
               return updatedApplications;
             });
+            setUnreadCount(count => count + 1);
 
             // Afficher un toast pour la nouvelle candidature
             toast({
@@ -87,7 +93,27 @@ const NotificationBell = () => {
     };
   }, [toast]);
 
-  const unreadCount = applications.length || 0;
+  const handleNotificationClick = async (applicationId: string) => {
+    // Marquer la notification comme lue
+    const { error } = await supabase
+      .from("applications")
+      .update({ is_read: true })
+      .eq("id", applicationId);
+
+    if (error) {
+      console.error("Erreur lors de la mise à jour de la notification:", error);
+      return;
+    }
+
+    // Mettre à jour l'état local
+    setApplications(currentApplications => 
+      currentApplications.filter(app => app.id !== applicationId)
+    );
+    setUnreadCount(count => Math.max(0, count - 1));
+
+    // Rediriger vers la page de détails de la candidature
+    navigate(`/admin/application/${applicationId}`);
+  };
 
   return (
     <DropdownMenu>
@@ -103,7 +129,11 @@ const NotificationBell = () => {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
         {applications?.map((application) => (
-          <DropdownMenuItem key={application.id} className="p-4">
+          <DropdownMenuItem 
+            key={application.id} 
+            className="p-4 cursor-pointer hover:bg-accent"
+            onClick={() => handleNotificationClick(application.id)}
+          >
             <div>
               <p className="font-medium">Nouvelle candidature</p>
               <p className="text-sm text-gray-500">
@@ -114,7 +144,7 @@ const NotificationBell = () => {
         ))}
         {(!applications || applications.length === 0) && (
           <DropdownMenuItem disabled>
-            Aucune candidature récente
+            Aucune notification
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>
