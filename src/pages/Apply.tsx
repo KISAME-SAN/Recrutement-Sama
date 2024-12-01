@@ -5,7 +5,6 @@ import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
 import { ApplicationForm } from "@/components/application/ApplicationForm";
 import { ApplicationFormData } from "@/types/application";
-import { createApplicationNotification } from "@/utils/notifications";
 
 const Apply = () => {
   const { id } = useParams();
@@ -84,14 +83,6 @@ const Apply = () => {
         .single();
 
       if (applicationError) throw applicationError;
-
-      // Créer la notification après la création réussie de la candidature
-      console.log("Création de la notification");
-      await createApplicationNotification({
-        first_name: values.firstName,
-        last_name: values.lastName,
-        job_id: id as string,
-      });
 
       return newApplication;
     },
