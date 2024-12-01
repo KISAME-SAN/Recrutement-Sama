@@ -13,56 +13,71 @@ import { useToast } from "@/hooks/use-toast";
 
 const NotificationBell = () => {
   const { toast } = useToast();
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [applications, setApplications] = useState<any[]>([]);
 
-  // Charger les notifications initiales
+  // Charger les candidatures initiales
   useEffect(() => {
-    const loadNotifications = async () => {
+    const loadApplications = async () => {
       const { data, error } = await supabase
-        .from("notifications")
-        .select("*")
+        .from("applications")
+        .select(`
+          *,
+          jobs (
+            title
+          )
+        `)
         .order("created_at", { ascending: false })
         .limit(5);
 
       if (error) {
-        console.error("Erreur lors du chargement des notifications:", error);
+        console.error("Erreur lors du chargement des candidatures:", error);
         return;
       }
 
       if (data) {
-        setNotifications(data);
+        setApplications(data);
       }
     };
 
-    loadNotifications();
+    loadApplications();
   }, []);
 
-  // Configurer l'écoute Realtime
+  // Configurer l'écoute Realtime pour les nouvelles candidatures
   useEffect(() => {
     const channel = supabase
-      .channel('notifications')
+      .channel('applications')
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'notifications'
+          table: 'applications'
         },
-        (payload) => {
-          console.log('Nouvelle notification reçue:', payload);
-          const newNotification = payload.new;
+        async (payload) => {
+          console.log('Nouvelle candidature reçue:', payload);
+          const newApplication = payload.new;
           
-          // Ajouter la nouvelle notification à l'état
-          setNotifications(currentNotifications => {
-            const updatedNotifications = [newNotification, ...currentNotifications].slice(0, 5);
-            return updatedNotifications;
-          });
+          // Récupérer le titre du poste
+          const { data: jobData } = await supabase
+            .from("jobs")
+            .select("title")
+            .eq("id", newApplication.job_id)
+            .single();
 
-          // Afficher un toast pour la nouvelle notification
-          toast({
-            title: newNotification.title,
-            description: newNotification.message,
-          });
+          if (jobData) {
+            // Ajouter la nouvelle candidature à l'état
+            const applicationWithJob = { ...newApplication, jobs: { title: jobData.title } };
+            setApplications(currentApplications => {
+              const updatedApplications = [applicationWithJob, ...currentApplications].slice(0, 5);
+              return updatedApplications;
+            });
+
+            // Afficher un toast pour la nouvelle candidature
+            toast({
+              title: "Nouvelle candidature",
+              description: `${newApplication.first_name} ${newApplication.last_name} vient de postuler pour le poste de ${jobData.title}`,
+            });
+          }
         }
       )
       .subscribe();
@@ -73,7 +88,7 @@ const NotificationBell = () => {
     };
   }, [toast]);
 
-  const unreadCount = notifications?.filter(n => !n.read).length || 0;
+  const unreadCount = applications.length || 0;
 
   return (
     <DropdownMenu>
@@ -88,17 +103,19 @@ const NotificationBell = () => {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
-        {notifications?.map((notification) => (
-          <DropdownMenuItem key={notification.id} className="p-4">
+        {applications?.map((application) => (
+          <DropdownMenuItem key={application.id} className="p-4">
             <div>
-              <p className="font-medium">{notification.title}</p>
-              <p className="text-sm text-gray-500">{notification.message}</p>
+              <p className="font-medium">Nouvelle candidature</p>
+              <p className="text-sm text-gray-500">
+                {application.first_name} {application.last_name} a postulé pour le poste de {application.jobs?.title}
+              </p>
             </div>
           </DropdownMenuItem>
         ))}
-        {(!notifications || notifications.length === 0) && (
+        {(!applications || applications.length === 0) && (
           <DropdownMenuItem disabled>
-            Aucune notification
+            Aucune candidature récente
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>
