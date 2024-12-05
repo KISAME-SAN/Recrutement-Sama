@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
 import { ApplicationForm } from "@/components/application/ApplicationForm";
 import { ApplicationFormData } from "@/types/application";
-import { createApplicationNotification } from "@/utils/notifications";
+import { submitApplication } from "@/utils/applications";
 
 const Apply = () => {
   const { id } = useParams();
@@ -27,81 +27,16 @@ const Apply = () => {
 
   const applyMutation = useMutation({
     mutationFn: async (values: ApplicationFormData) => {
-      console.log("Début de la mutation avec les valeurs:", values);
-      
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) {
-        console.error("Utilisateur non connecté");
-        throw new Error("Vous devez être connecté");
-      }
-
-      // Upload CV
-      const cvFile = values.cv;
-      const cvPath = `applications/${user.data.user.id}/${id}/cv-${Date.now()}-${cvFile.name}`;
-      console.log("Uploading CV to:", cvPath);
-      const { error: cvError } = await supabase.storage
-        .from("documents")
-        .upload(cvPath, cvFile);
-      if (cvError) {
-        console.error("Erreur upload CV:", cvError);
-        throw cvError;
-      }
-
-      // Upload Cover Letter
-      const clFile = values.coverLetter;
-      const clPath = `applications/${user.data.user.id}/${id}/cl-${Date.now()}-${clFile.name}`;
-      console.log("Uploading Cover Letter to:", clPath);
-      const { error: clError } = await supabase.storage
-        .from("documents")
-        .upload(clPath, clFile);
-      if (clError) {
-        console.error("Erreur upload lettre de motivation:", clError);
-        throw clError;
-      }
-
-      // Create application
-      console.log("Création de la candidature dans la base de données");
-      const { data: newApplication, error: applicationError } = await supabase
-        .from("applications")
-        .insert({
-          job_id: id,
-          user_id: user.data.user.id,
-          first_name: values.firstName,
-          last_name: values.lastName,
-          email: values.email,
-          phone: values.phone,
-          gender: values.gender,
-          age: values.age,
-          professional_experience: values.professionalExperience,
-          skills: values.skills,
-          diploma: values.diploma,
-          years_of_experience: values.yearsOfExperience,
-          previous_company: values.previousCompany,
-          cv_url: cvPath,
-          cover_letter_url: clPath,
-        })
-        .select()
-        .single();
-
-      if (applicationError) throw applicationError;
-
-      // Créer la notification après la création réussie de la candidature
-      console.log("Création de la notification");
-      await createApplicationNotification({
-        first_name: values.firstName,
-        last_name: values.lastName,
-        job_id: id as string,
-      });
-
-      return newApplication;
+      if (!id) throw new Error("ID de l'offre manquant");
+      return await submitApplication(values, id);
     },
     onSuccess: () => {
       toast.success("Votre candidature a été envoyée avec succès");
-      navigate("/jobs");
+      navigate("/");
     },
     onError: (error: Error) => {
-      console.error("Erreur complète:", error);
-      toast.error("Erreur lors de l'envoi de la candidature: " + error.message);
+      console.error("Erreur lors de la soumission:", error);
+      toast.error(`Erreur: ${error.message}`);
     },
   });
 

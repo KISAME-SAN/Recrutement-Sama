@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: kisame-web-connect
+    env: node
+    buildCommand: NODE_OPTIONS=--max-old-space-size=4096 bun install && bun run build
+    startCommand: bun run preview
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+      - key: BUN_VERSION
+        value: 1.1.0
+    autoDeploy: true

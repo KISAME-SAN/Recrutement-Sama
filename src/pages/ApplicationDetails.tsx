@@ -12,6 +12,8 @@ import {
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { createStatusChangeNotification } from "@/utils/notifications-v2";
+import { NotificationStatus } from "@/types/notifications";
 
 const ApplicationDetails = () => {
   const { id } = useParams();
@@ -22,7 +24,12 @@ const ApplicationDetails = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
-        .select("*")
+        .select(`
+          *,
+          jobs (
+            title
+          )
+        `)
         .eq("id", id)
         .single();
 
@@ -33,18 +40,31 @@ const ApplicationDetails = () => {
 
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
+      if (application?.status === newStatus) {
+        console.log("Le statut n'a pas changé, pas de mise à jour nécessaire");
+        return;
+      }
+
+      // 1. Mettre à jour le statut de la candidature
       const { error } = await supabase
         .from("applications")
         .update({ status: newStatus })
         .eq("id", id);
 
       if (error) throw error;
+
+      // 2. Créer une notification pour l'utilisateur
+      if (application?.user_id) {
+        const notificationStatus = newStatus as NotificationStatus;
+        await createStatusChangeNotification(id!, application.user_id, notificationStatus);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["application-details", id] });
       toast.success("Statut mis à jour avec succès");
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Erreur lors de la mise à jour:", error);
       toast.error("Erreur lors de la mise à jour du statut");
     },
   });
@@ -69,6 +89,21 @@ const ApplicationDetails = () => {
     );
   }
 
+  if (!application) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen pt-24 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <div className="flex justify-center items-center h-64">
+              <p className="text-gray-500">Aucune candidature trouvée</p>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <Navbar />
@@ -79,9 +114,9 @@ const ApplicationDetails = () => {
               {/* En-tête */}
               <div className="bg-primary p-6 text-white">
                 <h1 className="text-3xl font-bold">
-                  {application?.first_name} {application?.last_name}
+                  {application.first_name} {application.last_name}
                 </h1>
-                <p className="mt-2 text-primary-foreground/80">{application?.email}</p>
+                <p className="mt-2 text-primary-foreground/80">{application.email}</p>
               </div>
 
               {/* Informations personnelles */}
@@ -94,15 +129,15 @@ const ApplicationDetails = () => {
                     <div className="space-y-2">
                       <p>
                         <span className="font-medium">Téléphone:</span>{" "}
-                        {application?.phone}
+                        {application.phone}
                       </p>
                       <p>
                         <span className="font-medium">Genre:</span>{" "}
-                        {application?.gender}
+                        {application.gender}
                       </p>
                       <p>
                         <span className="font-medium">Âge:</span>{" "}
-                        {application?.age} ans
+                        {application.age} ans
                       </p>
                     </div>
                   </div>
@@ -114,18 +149,18 @@ const ApplicationDetails = () => {
                     <div className="space-y-2">
                       <p>
                         <span className="font-medium">Diplôme:</span>{" "}
-                        {application?.diploma}
+                        {application.diploma}
                       </p>
                       <p>
                         <span className="font-medium">Années d'expérience:</span>{" "}
-                        {application?.years_of_experience}
+                        {application.years_of_experience}
                       </p>
-                      {application?.previous_company && (
+                      {application.previous_company && (
                         <p>
                           <span className="font-medium">
                             Entreprise précédente:
                           </span>{" "}
-                          {application?.previous_company}
+                          {application.previous_company}
                         </p>
                       )}
                     </div>
@@ -137,16 +172,18 @@ const ApplicationDetails = () => {
                   <h2 className="text-xl font-semibold text-primary">
                     Expérience professionnelle
                   </h2>
-                  <p className="whitespace-pre-wrap">
-                    {application?.professional_experience}
-                  </p>
+                  <div className="whitespace-pre-wrap break-words overflow-hidden bg-gray-50 rounded-lg p-4 border">
+                    {application.professional_experience}
+                  </div>
                 </div>
 
                 <div className="space-y-4">
                   <h2 className="text-xl font-semibold text-primary">
                     Compétences
                   </h2>
-                  <p className="whitespace-pre-wrap">{application?.skills}</p>
+                  <div className="whitespace-pre-wrap break-words overflow-hidden bg-gray-50 rounded-lg p-4 border">
+                    {application.skills}
+                  </div>
                 </div>
 
                 {/* Documents */}
@@ -155,7 +192,7 @@ const ApplicationDetails = () => {
                   <div className="flex gap-4">
                     <Button
                       onClick={async () => {
-                        const url = await getFileUrl(application?.cv_url);
+                        const url = await getFileUrl(application.cv_url);
                         window.open(url, "_blank");
                       }}
                       className="flex items-center gap-2"
@@ -166,7 +203,7 @@ const ApplicationDetails = () => {
                     <Button
                       onClick={async () => {
                         const url = await getFileUrl(
-                          application?.cover_letter_url
+                          application.cover_letter_url
                         );
                         window.open(url, "_blank");
                       }}
@@ -185,7 +222,7 @@ const ApplicationDetails = () => {
                       Statut de la candidature
                     </h2>
                     <Select
-                      value={application?.status}
+                      value={application.status}
                       onValueChange={(value) => updateStatusMutation.mutate(value)}
                     >
                       <SelectTrigger className="w-[200px]">

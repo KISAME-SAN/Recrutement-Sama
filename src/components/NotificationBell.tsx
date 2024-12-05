@@ -6,74 +6,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
-import { useEffect, useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useNotifications } from "@/hooks/use-notifications";
+import { useUserNotifications } from "@/hooks/use-user-notifications";
 
 const NotificationBell = () => {
-  const { toast } = useToast();
-  const [notifications, setNotifications] = useState<any[]>([]);
-
-  // Charger les notifications initiales
-  useEffect(() => {
-    const loadNotifications = async () => {
-      const { data, error } = await supabase
-        .from("notifications")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(5);
-
-      if (error) {
-        console.error("Erreur lors du chargement des notifications:", error);
-        return;
-      }
-
-      if (data) {
-        setNotifications(data);
-      }
-    };
-
-    loadNotifications();
-  }, []);
-
-  // Configurer l'écoute Realtime
-  useEffect(() => {
-    const channel = supabase
-      .channel('notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications'
-        },
-        (payload) => {
-          console.log('Nouvelle notification reçue:', payload);
-          const newNotification = payload.new;
-          
-          // Ajouter la nouvelle notification à l'état
-          setNotifications(currentNotifications => {
-            const updatedNotifications = [newNotification, ...currentNotifications].slice(0, 5);
-            return updatedNotifications;
-          });
-
-          // Afficher un toast pour la nouvelle notification
-          toast({
-            title: newNotification.title,
-            description: newNotification.message,
-          });
-        }
-      )
-      .subscribe();
-
-    // Cleanup lors du démontage du composant
-    return () => {
-      channel.unsubscribe();
-    };
-  }, [toast]);
-
-  const unreadCount = notifications?.filter(n => !n.read).length || 0;
+  const { isAdmin } = useAuth();
+  
+  // Utiliser le bon hook selon le type d'utilisateur
+  const adminHook = useNotifications();
+  const userHook = useUserNotifications();
+  
+  const { notifications, unreadCount } = isAdmin ? adminHook : userHook;
 
   return (
     <DropdownMenu>

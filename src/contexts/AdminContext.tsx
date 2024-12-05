@@ -4,6 +4,8 @@ import { User } from '@supabase/supabase-js';
 
 interface AdminContextType {
   isAdmin: boolean;
+  isHR: boolean;
+  user: User | null;
   login: (email: string, password: string) => Promise<{ error: any }>;
   logout: () => Promise<void>;
 }
@@ -12,36 +14,56 @@ const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
 export function AdminProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isHR, setIsHR] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Vérifier la session au chargement
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        checkIfAdmin(session.user);
+        setUser(session.user);
+        checkRole(session.user);
       }
     });
 
-    // Écouter les changements d'auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        checkIfAdmin(session.user);
+        setUser(session.user);
+        checkRole(session.user);
       } else {
+        setUser(null);
         setIsAdmin(false);
+        setIsHR(false);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const checkIfAdmin = async (user: User) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single();
+  const checkRole = async (user: User | null) => {
+    if (!user) {
+      console.log("No user found, setting admin and HR to false");
+      setIsAdmin(false);
+      setIsHR(false);
+      return;
+    }
 
-    if (!error && data) {
-      setIsAdmin(data.is_admin);
+    try {
+      console.log("Checking role for user:", user.id);
+      
+      // Vérifier les métadonnées de l'utilisateur
+      const isUserAdmin = user.app_metadata?.is_admin === true;
+      const isUserHR = user.app_metadata?.is_hr === true;
+      
+      console.log("User metadata:", { isUserAdmin, isUserHR });
+      
+      setIsAdmin(isUserAdmin);
+      setIsHR(isUserHR);
+      
+      console.log("Updated roles - Admin:", isUserAdmin, "HR:", isUserHR);
+    } catch (error) {
+      console.error("Error in checkRole:", error);
+      setIsAdmin(false);
+      setIsHR(false);
     }
   };
 
@@ -55,11 +77,21 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     await supabase.auth.signOut();
+    setUser(null);
     setIsAdmin(false);
+    setIsHR(false);
   };
 
   return (
-    <AdminContext.Provider value={{ isAdmin, login, logout }}>
+    <AdminContext.Provider
+      value={{
+        isAdmin,
+        isHR,
+        user,
+        login,
+        logout,
+      }}
+    >
       {children}
     </AdminContext.Provider>
   );

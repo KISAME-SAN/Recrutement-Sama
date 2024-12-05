@@ -119,7 +119,7 @@ const JobDetails = () => {
                   <Target className="h-5 w-5" />
                   Description du poste
                 </h2>
-                <div className="text-muted-foreground whitespace-pre-wrap">
+                <div className="text-muted-foreground whitespace-pre-wrap break-words overflow-hidden">
                   {job.description}
                 </div>
               </section>
@@ -129,7 +129,7 @@ const JobDetails = () => {
                   <CheckCircle2 className="h-5 w-5" />
                   Compétences techniques requises
                 </h2>
-                <div className="text-muted-foreground whitespace-pre-wrap">
+                <div className="text-muted-foreground whitespace-pre-wrap break-words overflow-hidden">
                   {job.technical_skills}
                 </div>
               </section>
@@ -139,7 +139,7 @@ const JobDetails = () => {
                   <Brain className="h-5 w-5" />
                   Compétences comportementales
                 </h2>
-                <div className="text-muted-foreground whitespace-pre-wrap">
+                <div className="text-muted-foreground whitespace-pre-wrap break-words overflow-hidden">
                   {job.soft_skills}
                 </div>
               </section>
@@ -149,17 +149,17 @@ const JobDetails = () => {
                   <Laptop2 className="h-5 w-5" />
                   Outils à maîtriser
                 </h2>
-                <div className="text-muted-foreground whitespace-pre-wrap">
+                <div className="text-muted-foreground whitespace-pre-wrap break-words overflow-hidden">
                   {job.tools}
                 </div>
               </section>
 
               <section className="space-y-4">
                 <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <BookOpen className="h-5 w-5" />
+                  <GraduationCap className="h-5 w-5" />
                   Formation et expérience
                 </h2>
-                <div className="text-muted-foreground whitespace-pre-wrap">
+                <div className="text-muted-foreground whitespace-pre-wrap break-words overflow-hidden">
                   {job.experience}
                 </div>
               </section>
