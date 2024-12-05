@@ -167,7 +167,7 @@ const CreateAdmin = () => {
                     <FormItem>
                       <FormLabel>Nom complet</FormLabel>
                       <FormControl>
-                        <Input placeholder="John Doe" {...field} />
+                        <Input placeholder="Mamadou Ndiaye" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -181,7 +181,7 @@ const CreateAdmin = () => {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="john@example.com" {...field} />
+                        <Input type="email" placeholder="mamadou@example.com" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

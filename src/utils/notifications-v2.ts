@@ -48,6 +48,16 @@ export async function createAdminNotification(
   }
 }
 
+interface Job {
+  title: string;
+}
+
+interface ApplicationWithJob {
+  id: string;
+  job_id: string;
+  jobs: Job;
+}
+
 export async function createStatusChangeNotification(
   applicationId: string,
   userId: string,
@@ -80,16 +90,8 @@ export async function createStatusChangeNotification(
       throw new Error('Impossible de récupérer les informations du poste');
     }
 
-    // Typer correctement la relation jobs
-    type JobRelation = {
-      title: string;
-    };
-
-    const jobTitle = (application.jobs as JobRelation).title;
-    if (!jobTitle) {
-      console.error('Titre du poste manquant:', application.jobs);
-      throw new Error('Titre du poste manquant');
-    }
+    const appWithJob = application as ApplicationWithJob;
+    const jobTitle = appWithJob.jobs.title;
 
     // 2. Créer le message en fonction du statut
     const statusMessages: Record<NotificationStatus, string> = {
@@ -105,7 +107,7 @@ export async function createStatusChangeNotification(
     // 3. Créer la notification utilisateur
     const notificationData = {
       user_id: userId,
-      job_id: application.job_id,
+      job_id: appWithJob.job_id,
       job_title: jobTitle,
       application_id: applicationId,
       status: newStatus,

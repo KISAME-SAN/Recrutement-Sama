@@ -5,7 +5,6 @@ import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
 import { ApplicationForm } from "@/components/application/ApplicationForm";
 import { ApplicationFormData } from "@/types/application";
-import { submitApplication } from "@/utils/applications";
 
 const Apply = () => {
   const { id } = useParams();
@@ -28,7 +27,58 @@ const Apply = () => {
   const applyMutation = useMutation({
     mutationFn: async (values: ApplicationFormData) => {
       if (!id) throw new Error("ID de l'offre manquant");
-      return await submitApplication(values, id);
+
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) {
+        throw new Error("Vous devez être connecté");
+      }
+
+      // Upload CV
+      const cvFile = values.cv;
+      const cvPath = `applications/${user.data.user.id}/${id}/cv-${Date.now()}-${cvFile.name}`;
+      const { error: cvError } = await supabase.storage
+        .from("documents")
+        .upload(cvPath, cvFile);
+      if (cvError) {
+        throw cvError;
+      }
+
+      // Upload Cover Letter
+      const clFile = values.coverLetter;
+      const clPath = `applications/${user.data.user.id}/${id}/cl-${Date.now()}-${clFile.name}`;
+      const { error: clError } = await supabase.storage
+        .from("documents")
+        .upload(clPath, clFile);
+      if (clError) {
+        throw clError;
+      }
+
+      // Create application
+      const { data: newApplication, error: applicationError } = await supabase
+        .from("applications")
+        .insert({
+          job_id: id,
+          user_id: user.data.user.id,
+          first_name: values.firstName,
+          last_name: values.lastName,
+          email: values.email,
+          phone: values.phone,
+          gender: values.gender,
+          age: values.age,
+          professional_experience: values.professionalExperience,
+          skills: values.skills,
+          diploma: values.diploma,
+          years_of_experience: values.yearsOfExperience,
+          previous_company: values.previousCompany,
+          cv_url: cvPath,
+          cover_letter_url: clPath,
+        })
+        .select()
+        .single();
+
+      if (applicationError) throw applicationError;
+
+      return newApplication;
     },
     onSuccess: () => {
       toast.success("Votre candidature a été envoyée avec succès");

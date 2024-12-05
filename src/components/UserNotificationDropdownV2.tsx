@@ -13,16 +13,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useUserNotifications } from '@/hooks/use-user-notifications-v2';
 import { UserNotification } from '@/types/notifications';
 
-const getStatusMessage = (status: UserNotification['status']) => {
-  const statusMessages = {
-    pending: "Votre candidature est en cours d'examen",
-    accepted: "Félicitations ! Votre candidature a été acceptée",
-    rejected: "Votre candidature n'a malheureusement pas été retenue",
-    interview: "Vous êtes invité(e) à un entretien"
-  };
-  return statusMessages[status];
-};
-
 export function UserNotificationDropdownV2() {
   const navigate = useNavigate();
   const { notifications, isLoading, markAsRead } = useUserNotifications();
@@ -80,7 +70,7 @@ export function UserNotificationDropdownV2() {
               >
                 <div className="space-y-1">
                   <p className={`${!notification.read ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
-                    {getStatusMessage(notification.status)}
+                    {notification.message}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     Poste : {notification.job_title}

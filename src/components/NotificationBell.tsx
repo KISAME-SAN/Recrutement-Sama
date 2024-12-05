@@ -1,11 +1,14 @@
+import { useNavigate } from "react-router-dom";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+<<<<<<< HEAD
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/use-notifications";
 import { useUserNotifications } from "@/hooks/use-user-notifications";
@@ -18,6 +21,20 @@ const NotificationBell = () => {
   const userHook = useUserNotifications();
   
   const { notifications, unreadCount } = isAdmin ? adminHook : userHook;
+=======
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { useNotifications } from "@/hooks/use-notifications";
+
+export default function NotificationBell() {
+  const navigate = useNavigate();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+
+  const handleNotificationClick = (notificationId: string, applicationId: string) => {
+    markAsRead(notificationId);
+    navigate(`/admin/application/${applicationId}`);
+  };
+>>>>>>> d5a6e49bcf8895c7ac92984de873496cb2229190
 
   return (
     <DropdownMenu>
@@ -25,29 +42,57 @@ const NotificationBell = () => {
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
               {unreadCount}
             </span>
           )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
-        {notifications?.map((notification) => (
-          <DropdownMenuItem key={notification.id} className="p-4">
-            <div>
-              <p className="font-medium">{notification.title}</p>
-              <p className="text-sm text-gray-500">{notification.message}</p>
+        <div className="flex items-center justify-between p-2">
+          <h2 className="font-semibold">Notifications</h2>
+          {unreadCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => markAllAsRead()}
+              className="text-xs"
+            >
+              Tout marquer comme lu
+            </Button>
+          )}
+        </div>
+        <ScrollArea className="h-[300px]">
+          {notifications.length === 0 ? (
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              Aucune notification
             </div>
-          </DropdownMenuItem>
-        ))}
-        {(!notifications || notifications.length === 0) && (
-          <DropdownMenuItem disabled>
-            Aucune notification
-          </DropdownMenuItem>
-        )}
+          ) : (
+            notifications.map((notification) => (
+              <DropdownMenuItem
+                key={notification.id}
+                className={`p-4 cursor-pointer ${
+                  !notification.is_read ? 'bg-muted/50' : ''
+                }`}
+                onClick={() =>
+                  handleNotificationClick(notification.id, notification.application_id)
+                }
+              >
+                <div className="space-y-1">
+                  <p className={!notification.is_read ? 'font-medium' : ''}>
+                    {notification.message}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(notification.created_at), 'PPp', {
+                      locale: fr,
+                    })}
+                  </p>
+                </div>
+              </DropdownMenuItem>
+            ))
+          )}
+        </ScrollArea>
       </DropdownMenuContent>
     </DropdownMenu>
   );
-};
-
-export default NotificationBell;
+}

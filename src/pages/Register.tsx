@@ -79,7 +79,7 @@ const Register = () => {
               <Input 
                 id="name" 
                 type="text" 
-                placeholder="Jean Dupont"
+                placeholder="Mamadou Ndiaye"
                 value={formData.name}
                 onChange={handleChange}
                 disabled={isLoading}
@@ -91,7 +91,7 @@ const Register = () => {
               <Input 
                 id="email" 
                 type="email" 
-                placeholder="votre@email.com"
+                placeholder="mamadou@email.com"
                 value={formData.email}
                 onChange={handleChange}
                 disabled={isLoading}

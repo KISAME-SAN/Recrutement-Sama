@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS notifications (
   message TEXT NOT NULL,
   read BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  application_id UUID REFERENCES applications(id) ON DELETE CASCADE
 );
 
 -- Politiques RLS pour la table notifications
@@ -38,6 +39,3 @@ CREATE POLICY "Les utilisateurs peuvent voir leurs propres notifications"
 CREATE POLICY "Tout le monde peut créer des notifications"
   ON notifications FOR INSERT
   WITH CHECK (true);
-
--- Permettre l'insertion de notifications sans user_id
-ALTER TABLE notifications ALTER COLUMN user_id DROP NOT NULL;
